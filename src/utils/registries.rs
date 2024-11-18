@@ -1,3 +1,4 @@
+use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::{collections::HashMap, path::Path};
@@ -15,6 +16,7 @@ pub struct Store {
     // This will allow TOML to map to a HashMap of `String` -> `Registry`
     #[serde(flatten)]
     pub registries: HashMap<String, Registry>,
+    pub current_use: Option<String>,
 }
 
 impl Store {
@@ -23,10 +25,11 @@ impl Store {
 
         if let Ok(current_dir) = env::current_dir() {
             let absolute_path: std::path::PathBuf = current_dir.join(file_path);
-            // println!(
-            // "Absolute path of registries.toml: {} \n",
-            // absolute_path.display()
-            // );
+            println!(
+                "{} {}",
+                format!("Absolute path of registries list").blue().bold(),
+                format!("{}", absolute_path.display())
+            );
         }
 
         if Path::new(file_path).exists() {
@@ -36,6 +39,7 @@ impl Store {
         } else {
             Store {
                 registries: HashMap::new(),
+                current_use: Some("hello".to_string()),
             }
         }
     }
@@ -46,8 +50,33 @@ impl Store {
     }
 
     pub fn list_registries(&self) {
+        println!("{}", "Registry List:".bold().cyan());
+        println!("{:?}", &self);
+
         for (name, registry) in self.registries.iter() {
-            // println!("{} -> {}", name, registry.registry)
+            if let Some(current) = &self.current_use {
+                if name == current {
+                    println!(
+                        "{} -> {} [{}]",
+                        name.green().bold(),
+                        registry.registry.yellow(),
+                        "CURRENT".white().on_green()
+                    );
+                } else {
+                    println!("{} -> {}", name.green(), registry.registry.yellow());
+                }
+            } else {
+                println!("{} -> {}", name.green(), registry.registry.yellow());
+            }
+        }
+    }
+
+    pub fn set_current_use(&mut self, name: &str) {
+        if self.registries.contains_key(name) {
+            self.current_use = Some(name.to_string());
+            println!("{} {}", "Switched to registry:".cyan(), name.green().bold());
+        } else {
+            println!("{} {}", "Registry not found:".red(), name.red().bold());
         }
     }
 }

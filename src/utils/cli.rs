@@ -1,3 +1,4 @@
+use colored::Colorize;
 use std::{env, path::Path};
 
 use clap::{Parser, Subcommand};
@@ -58,11 +59,15 @@ pub async fn execute_command(command: Commands, store: &mut Store) {
         Commands::Use { registry } => {
             if let Some(registry_data) = store.registries.get(&registry) {
                 let registry_text = format!("registry={}", registry_data.registry);
-                let npmrc_path = ".npmrc";
+                let npmrc_path: &str = ".npmrc";
 
                 if let Ok(current_dir) = env::current_dir() {
                     let absolute_path: std::path::PathBuf = current_dir.join(npmrc_path);
-                    // println!("Absolute path of .npmrc: {} \n", absolute_path.display());
+                    println!(
+                        "{} {}",
+                        format!("Absolute path of .npmrc:").blue().bold(),
+                        format!("{}", absolute_path.display())
+                    );
                 }
 
                 if Path::new(npmrc_path).exists() {
@@ -74,7 +79,17 @@ pub async fn execute_command(command: Commands, store: &mut Store) {
                 } else {
                     write(npmrc_path, registry_text).await.unwrap();
                 }
-                // println!("Current Dir registry updated!");
+
+                // set current use registry
+                store.set_current_use(&registry);
+
+                store.save().await;
+
+                println!(
+                    "{}{}",
+                    format!(" SUCCESS ").white().on_green(),
+                    format!(" Current Dir registry updated!")
+                );
             } else {
                 eprintln!("Registry not found!")
             }

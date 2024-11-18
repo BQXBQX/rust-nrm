@@ -1,0 +1,25 @@
+current_use = "taobao"
+
+[npm]
+registry = "https://registry.npmjs.org/"
+home = "https://www.npmjs.org"
+
+[yarn]
+registry = "https://registry.yarnpkg.com/"
+home = "https://yarnpkg.com"
+
+[taobao]
+registry = "https://registry.npmmirror.com/"
+home = "https://npmmirror.com/"
+
+[tencent]
+registry = "https://mirrors.cloud.tencent.com/npm/"
+home = "https://mirrors.cloud.tencent.com/npm/"
+
+[npmMirror]
+registry = "https://skimdb.npmjs.com/registry/"
+home = "https://skimdb.npmjs.com/"
+
+[github]
+registry = "https://npm.pkg.github.com/"
+home = "https://npm.pkg.github.com/"
