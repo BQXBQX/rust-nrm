@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use rnrm::utils::{
-    cli::{execute_command, Commands},
+    cli::{CommandExecutor, Commands},
     registries::{Registry, Store},
 };
 use tokio::runtime::Runtime;
@@ -8,7 +8,7 @@ use tokio::runtime::Runtime;
 fn bench_ls(c: &mut Criterion) {
     c.bench_function("cli_ls", |b| {
         b.iter(|| {
-            // Create a mock store and call `Ls` command
+            // Create a mock store
             let mut store = Store {
                 registries: std::collections::HashMap::new(),
             };
@@ -25,7 +25,8 @@ fn bench_ls(c: &mut Criterion) {
             // Create a runtime for async operations
             let rt = tokio::runtime::Runtime::new().unwrap();
             rt.block_on(async {
-                execute_command(Commands::Ls, &mut store).await;
+                let mut executor = CommandExecutor::new(store);
+                executor.execute(Commands::Ls).await;
             });
         })
     });
@@ -34,7 +35,7 @@ fn bench_ls(c: &mut Criterion) {
 fn bench_use(c: &mut Criterion) {
     c.bench_function("cli_use", |b| {
         b.iter(|| {
-            // Create a mock store and call `Use` command
+            // Create a mock store
             let mut store = Store {
                 registries: std::collections::HashMap::new(),
             };
@@ -51,13 +52,13 @@ fn bench_use(c: &mut Criterion) {
             // Simulate calling the Use command
             let registry_name = "example_registry".to_string();
             let rt = Runtime::new().unwrap();
-            rt.block_on(execute_command(
-                Commands::Use {
+            rt.block_on(async {
+                let mut executor = CommandExecutor::new(store);
+                executor.execute(Commands::Use {
                     registry: registry_name,
                     local: false,
-                },
-                &mut store,
-            ));
+                }).await;
+            });
         });
     });
 }
@@ -65,7 +66,7 @@ fn bench_use(c: &mut Criterion) {
 fn bench_add(c: &mut Criterion) {
     c.bench_function("cli_add", |b| {
         b.iter(|| {
-            // Create a mock store and call `Add` command
+            // Create a mock store
             let mut store = Store {
                 registries: std::collections::HashMap::new(),
             };
@@ -76,14 +77,14 @@ fn bench_add(c: &mut Criterion) {
             let home = Some("https://home.com".to_string());
 
             let rt = Runtime::new().unwrap();
-            rt.block_on(execute_command(
-                Commands::Add {
+            rt.block_on(async {
+                let mut executor = CommandExecutor::new(store);
+                executor.execute(Commands::Add {
                     registry: registry_name,
                     url: registry_url,
                     home,
-                },
-                &mut store,
-            ));
+                }).await;
+            });
         });
     });
 }
@@ -91,7 +92,7 @@ fn bench_add(c: &mut Criterion) {
 fn bench_remove(c: &mut Criterion) {
     c.bench_function("cli_remove", |b| {
         b.iter(|| {
-            // Create a mock store and call `Remove` command
+            // Create a mock store
             let mut store = Store {
                 registries: std::collections::HashMap::new(),
             };
@@ -108,12 +109,12 @@ fn bench_remove(c: &mut Criterion) {
             // Simulate calling the Remove command
             let registry_name = "example_registry".to_string();
             let rt = Runtime::new().unwrap();
-            rt.block_on(execute_command(
-                Commands::Remove {
+            rt.block_on(async {
+                let mut executor = CommandExecutor::new(store);
+                executor.execute(Commands::Remove {
                     registry: registry_name,
-                },
-                &mut store,
-            ));
+                }).await;
+            });
         });
     });
 }
