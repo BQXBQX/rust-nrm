@@ -1,5 +1,5 @@
 use clap::Parser;
-use rnrm::utils::{
+use rust_nrm::utils::{
     cli::{Cli, CommandExecutor},
     registries::Store,
 };

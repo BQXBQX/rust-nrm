@@ -1,5 +1,5 @@
 [package]
-name = "rnrm"
+name = "rust-nrm"
 version = "0.1.0"
 edition = "2021"
 description = "A Rust-based NPM Registry Manager for efficiently managing and switching between npm registries"

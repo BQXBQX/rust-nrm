@@ -1,37 +1,63 @@
-# rnrm
+# rust-nrm
 
-**_manage npm registries base rust 🦀_**
+A fast and efficient NPM registry manager written in Rust 🦀
+
+## Features
+
+- 🚀 Fast registry switching
+- 📋 List available registries
+- ➕ Add custom registries
+- 🗑️ Remove registries
+- 🔄 Switch between registries (global/local)
+- ⚡ Test registry speeds
+
+## Installation
+
+### From Cargo
+
+```bash
+cargo install rust-nrm
+```
+
+### From Source
+
+```bash
+git clone https://github.com/BQXBQX/rnrm.git
+cd rnrm
+cargo install --path .
+```
 
 ## Usage
 
-### List Available Registries
 ```bash
-rnrm ls
+# List all registries
+rust-nrm ls
+
+# Switch to a registry
+rust-nrm use npm
+rust-nrm use taobao
+
+# Use registry for current project only
+rust-nrm use npm --local
+
+# Add a custom registry
+rust-nrm add custom https://custom.registry.com/
+
+# Remove a registry
+rust-nrm rm custom
+
+# Test registry speeds
+rust-nrm test
 ```
 
-### Switch Registry
-```bash
-# Switch global registry
-rnrm use npm
+## Available Registries
 
-# Switch local registry (current directory only)
-rnrm use taobao --local
-```
-
-### Test Registry Speeds
-```bash
-rnrm test
-```
-
-### Add Custom Registry
-```bash
-rnrm add custom-registry https://my-registry.com/npm/
-```
-
-### Remove Registry
-```bash
-rnrm remove custom-registry
-```
+- npm - https://registry.npmjs.org/
+- yarn - https://registry.yarnpkg.com/
+- taobao - https://registry.npmmirror.com/
+- tencent - https://mirrors.cloud.tencent.com/npm/
+- npmMirror - https://skimdb.npmjs.com/registry/
+- github - https://npm.pkg.github.com/
 
 ## Benchmark Results: rnrm vs nrm
 
@@ -45,3 +71,11 @@ rnrm remove custom-registry
 | `remove` | 95.288 ms, 97.447 ms, 99.657 ms | 369.44 µs, 379.37 µs, 390.45 µs | -99.61% (rnrm is faster) |
 
 ### **Therefore, we should use `rnrm`!!!**
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

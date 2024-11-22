@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use rnrm::utils::{
+use rust_nrm::utils::{
     cli::{CommandExecutor, Commands},
     registries::{Registry, Store},
 };
@@ -54,10 +54,12 @@ fn bench_use(c: &mut Criterion) {
             let rt = Runtime::new().unwrap();
             rt.block_on(async {
                 let mut executor = CommandExecutor::new(store);
-                executor.execute(Commands::Use {
-                    registry: registry_name,
-                    local: false,
-                }).await;
+                executor
+                    .execute(Commands::Use {
+                        registry: registry_name,
+                        local: false,
+                    })
+                    .await;
             });
         });
     });
@@ -67,7 +69,7 @@ fn bench_add(c: &mut Criterion) {
     c.bench_function("cli_add", |b| {
         b.iter(|| {
             // Create a mock store
-            let mut store = Store {
+            let store = Store {
                 registries: std::collections::HashMap::new(),
             };
 
@@ -79,11 +81,13 @@ fn bench_add(c: &mut Criterion) {
             let rt = Runtime::new().unwrap();
             rt.block_on(async {
                 let mut executor = CommandExecutor::new(store);
-                executor.execute(Commands::Add {
-                    registry: registry_name,
-                    url: registry_url,
-                    home,
-                }).await;
+                executor
+                    .execute(Commands::Add {
+                        registry: registry_name,
+                        url: registry_url,
+                        home,
+                    })
+                    .await;
             });
         });
     });
@@ -111,9 +115,11 @@ fn bench_remove(c: &mut Criterion) {
             let rt = Runtime::new().unwrap();
             rt.block_on(async {
                 let mut executor = CommandExecutor::new(store);
-                executor.execute(Commands::Remove {
-                    registry: registry_name,
-                }).await;
+                executor
+                    .execute(Commands::Remove {
+                        registry: registry_name,
+                    })
+                    .await;
             });
         });
     });
