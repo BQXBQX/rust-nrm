@@ -2,6 +2,10 @@
 registry = "https://skimdb.npmjs.com/registry/"
 home = "https://skimdb.npmjs.com/"
 
+[npm]
+registry = "https://registry.npmjs.org/"
+home = "https://www.npmjs.org"
+
 [tencent]
 registry = "https://mirrors.cloud.tencent.com/npm/"
 home = "https://mirrors.cloud.tencent.com/npm/"
@@ -13,10 +17,6 @@ home = "https://yarnpkg.com"
 [taobao]
 registry = "https://registry.npmmirror.com/"
 home = "https://npmmirror.com/"
-
-[npm]
-registry = "https://registry.npmjs.org/"
-home = "https://www.npmjs.org"
 
 [github]
 registry = "https://npm.pkg.github.com/"

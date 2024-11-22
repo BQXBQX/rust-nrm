@@ -83,103 +83,105 @@ pub enum Commands {
     },
 }
 
-pub async fn execute_command(command: Commands, store: &mut Store) {
-    match command {
-        // list command
-        Commands::Ls => {
-            store.list_registries().await;
+pub struct CommandExecutor {
+    store: Store,
+}
+
+impl CommandExecutor {
+    pub fn new(store: Store) -> Self {
+        Self { store }
+    }
+
+    pub async fn execute(&mut self, command: Commands) {
+        match command {
+            Commands::Ls => self.handle_list().await,
+            Commands::Use { registry, local } => self.handle_use(registry, local).await,
+            Commands::Test => self.handle_test().await,
+            Commands::Add { registry, url, home } => self.handle_add(registry, url, home).await,
+            Commands::Remove { registry } => self.handle_remove(registry).await,
         }
+    }
 
-        // use command
-        Commands::Use { registry, local } => {
-            if let Some(registry_data) = store.registries.get(&registry) {
-                let registry_text = format!("registry={}", registry_data.registry);
+    async fn handle_list(&mut self) {
+        self.store.list_registries().await;
+    }
 
-                let npmrc_path = if local {
-                    ".npmrc".to_string()
+    async fn handle_use(&mut self, registry: String, local: bool) {
+        if let Some(registry_data) = self.store.registries.get(&registry) {
+            let registry_text = format!("registry={}", registry_data.registry);
+            let npmrc_path = if local {
+                ".npmrc".to_string()
+            } else {
+                let home_dir = env::var("HOME").expect("Failed to get HOME directory");
+                format!("{}/.npmrc", home_dir)
+            };
+
+            if let Ok(current_dir) = env::current_dir() {
+                let absolute_path = if local {
+                    current_dir.join(&npmrc_path)
                 } else {
-                    let home_dir = env::var("HOME").expect("Failed to get HOME directory");
-                    format!("{}/.npmrc", home_dir)
+                    Path::new(&npmrc_path).to_path_buf()
                 };
-
-                if let Ok(current_dir) = env::current_dir() {
-                    let absolute_path = if local {
-                        current_dir.join(&npmrc_path)
-                    } else {
-                        Path::new(&npmrc_path).to_path_buf()
-                    };
-                    println!(
-                        "{} {}",
-                        format!("Absolute path of .npmrc:").blue().bold(),
-                        format!("{}", absolute_path.display())
-                    );
-                }
-
-                if Path::new(&npmrc_path).exists() {
-                    let content = read_to_string(&npmrc_path).await.unwrap();
-                    let re = Regex::new(r"(?m)^\s*registry\s*=\s*.*$").unwrap();
-                    let updated_content = re.replace_all(&content, &registry_text).to_string();
-
-                    write(&npmrc_path, updated_content).await.unwrap();
-                } else {
-                    write(&npmrc_path, registry_text).await.unwrap();
-                }
-
-                // set current use registry
-                // store.set_current_use(&registry, local);
-                store.save().await;
-
-                Logger::success(&format!(
-                    "{} registry updated!",
-                    if local { "Local" } else { "Global" }
-                ));
-            } else {
-                Logger::error("Registry not found!");
+                println!(
+                    "{} {}",
+                    format!("Absolute path of .npmrc:").blue().bold(),
+                    format!("{}", absolute_path.display())
+                );
             }
-        }
 
-        // test command
-        Commands::Test => {
-            store.test_registry_speed().await;
-        }
+            if Path::new(&npmrc_path).exists() {
+                let content = read_to_string(&npmrc_path).await.unwrap();
+                let re = Regex::new(r"(?m)^\s*registry\s*=\s*.*$").unwrap();
+                let updated_content = re.replace_all(&content, &registry_text).to_string();
+                write(&npmrc_path, updated_content).await.unwrap();
+            } else {
+                write(&npmrc_path, registry_text).await.unwrap();
+            }
 
-        // add command
-        Commands::Add {
-            registry,
-            url,
-            home,
-        } => {
-            store.registries.insert(
-                registry.clone(),
-                Registry {
-                    registry: url.clone(),
-                    home,
-                },
-            );
-
-            store.save().await;
+            self.store.save().await;
             Logger::success(&format!(
-                "Registry {} added with URL: {}",
-                registry.green().bold(),
-                url.yellow()
+                "{} registry updated!",
+                if local { "Local" } else { "Global" }
             ));
+        } else {
+            Logger::error("Registry not found!");
         }
+    }
 
-        // remove command
-        Commands::Remove { registry } => {
-            if let Some(removed) = store.registries.remove(&registry) {
-                store.save().await;
-                Logger::success(&format!(
-                    "Registry {} removed (URL: {})",
-                    registry.green().bold(),
-                    removed.registry.yellow()
-                ));
-            } else {
-                Logger::error(&format!(
-                    "Registry {} not found",
-                    registry.red().bold()
-                ));
-            }
+    async fn handle_test(&mut self) {
+        self.store.test_registry_speed().await;
+    }
+
+    async fn handle_add(&mut self, registry: String, url: String, home: Option<String>) {
+        self.store.registries.insert(
+            registry.clone(),
+            Registry {
+                registry: url.clone(),
+                home,
+            },
+        );
+
+        self.store.save().await;
+        Logger::success(&format!(
+            "Registry {} added with URL: {}",
+            registry.green().bold(),
+            url.yellow()
+        ));
+    }
+
+    async fn handle_remove(&mut self, registry: String) {
+        if let Some(removed) = self.store.registries.remove(&registry) {
+            self.store.save().await;
+            Logger::success(&format!(
+                "Registry {} removed (URL: {})",
+                registry.green().bold(),
+                removed.registry.yellow()
+            ));
+        } else {
+            Logger::error(&format!(
+                "Registry {} not found",
+                registry.red().bold()
+            ));
         }
     }
 }
