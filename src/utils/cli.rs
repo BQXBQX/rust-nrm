@@ -10,8 +10,8 @@ use clap::{Parser, Subcommand};
 use super::{registries::Store, Logger};
 
 #[derive(Parser, Debug)]
-#[command(name = "rnrm")]
-#[command(version = "1.0")]
+#[command(name = "rust-nrm")]
+#[command(version = "0.1.3")]
 #[command(about = "A Rust-based NPM Registry Manager 🦀")]
 #[command(
     long_about = "RNRM helps you easily switch between different npm registries. It supports both global and local registry configuration."
