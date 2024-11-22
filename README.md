@@ -2,7 +2,38 @@
 
 **_manage npm registries base rust 🦀_**
 
-# Benchmark Results: rnrm vs nrm
+## Usage
+
+### List Available Registries
+```bash
+rnrm ls
+```
+
+### Switch Registry
+```bash
+# Switch global registry
+rnrm use npm
+
+# Switch local registry (current directory only)
+rnrm use taobao --local
+```
+
+### Test Registry Speeds
+```bash
+rnrm test
+```
+
+### Add Custom Registry
+```bash
+rnrm add custom-registry https://my-registry.com/npm/
+```
+
+### Remove Registry
+```bash
+rnrm remove custom-registry
+```
+
+## Benchmark Results: rnrm vs nrm
 
 ### Command Performance Comparison
 

@@ -6,6 +6,7 @@ use std::{collections::HashMap, path::Path};
 use tokio::fs::{read_to_string, write};
 use toml;
 
+use super::speed_test::{SpeedTestResult, SpeedTester};
 use super::Logger;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -22,12 +23,6 @@ pub struct Store {
 }
 
 impl Store {
-    pub fn new() -> Store {
-        Store {
-            registries: HashMap::new(),
-        }
-    }
-
     pub async fn load() -> Store {
         let file_path = "registries.toml";
 
@@ -128,10 +123,25 @@ impl Store {
             Logger::info(&format!(
                 "Switched to registry: {} ({})",
                 name.green().bold(),
-                if is_local { "local".yellow() } else { "global".yellow() }
+                if is_local {
+                    "local".yellow()
+                } else {
+                    "global".yellow()
+                }
             ));
         } else {
             Logger::error(&format!("Registry not found: {}", name));
         }
+    }
+
+    pub async fn test_registry_speed(&self) -> Vec<SpeedTestResult> {
+        let tester = SpeedTester::new();
+        let registries: Vec<(String, String)> = self
+            .registries
+            .iter()
+            .map(|(name, reg)| (name.clone(), reg.registry.clone()))
+            .collect();
+
+        tester.test_all(&registries).await
     }
 }

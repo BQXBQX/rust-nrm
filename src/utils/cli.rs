@@ -4,16 +4,18 @@ use std::env;
 use std::path::Path;
 use tokio::fs::{read_to_string, write};
 
-use clap::{Parser, Subcommand};
 use crate::utils::registries::Registry;
+use clap::{Parser, Subcommand};
 
-use super::{Logger, registries::Store};
+use super::{registries::Store, Logger};
 
 #[derive(Parser, Debug)]
 #[command(name = "rnrm")]
 #[command(version = "1.0")]
 #[command(about = "A Rust-based NPM Registry Manager 🦀")]
-#[command(long_about = "RNRM helps you easily switch between different npm registries. It supports both global and local registry configuration.")]
+#[command(
+    long_about = "RNRM helps you easily switch between different npm registries. It supports both global and local registry configuration."
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -23,12 +25,16 @@ pub struct Cli {
 pub enum Commands {
     /// List all available registries
     #[command(about = "List all available registries")]
-    #[command(long_about = "Display a list of all configured registries with their URLs. Currently active registries (global/local) will be highlighted.")]
+    #[command(
+        long_about = "Display a list of all configured registries with their URLs. Currently active registries (global/local) will be highlighted."
+    )]
     Ls,
 
     /// Switch to a different registry
     #[command(about = "Switch to a different registry")]
-    #[command(long_about = "Change the active npm registry. Use --local flag to change only the current directory's registry.")]
+    #[command(
+        long_about = "Change the active npm registry. Use --local flag to change only the current directory's registry."
+    )]
     Use {
         /// Name of the registry to use (e.g., npm, yarn, taobao)
         #[arg(required = true, value_name = "REGISTRY")]
@@ -41,12 +47,16 @@ pub enum Commands {
 
     /// Test registry response times
     #[command(about = "Test registry response times")]
-    #[command(long_about = "Measure and compare response times for all configured registries to help you choose the fastest one.")]
+    #[command(
+        long_about = "Measure and compare response times for all configured registries to help you choose the fastest one."
+    )]
     Test,
 
     /// Add a new registry
     #[command(about = "Add a new registry")]
-    #[command(long_about = "Add a custom registry with its URL and optional homepage. The registry will be available for use immediately.")]
+    #[command(
+        long_about = "Add a custom registry with its URL and optional homepage. The registry will be available for use immediately."
+    )]
     Add {
         /// Name for the new registry
         #[arg(required = true, value_name = "NAME")]
@@ -63,7 +73,9 @@ pub enum Commands {
 
     /// Remove a registry
     #[command(about = "Remove a registry")]
-    #[command(long_about = "Remove a registry from the configuration. Built-in registries cannot be removed.")]
+    #[command(
+        long_about = "Remove a registry from the configuration. Built-in registries cannot be removed."
+    )]
     Remove {
         /// Name of the registry to remove
         #[arg(required = true, value_name = "REGISTRY")]
@@ -128,7 +140,7 @@ pub async fn execute_command(command: Commands, store: &mut Store) {
 
         // test command
         Commands::Test => {
-            eprintln!("is developing")
+            store.test_registry_speed().await;
         }
 
         // add command
@@ -140,20 +152,34 @@ pub async fn execute_command(command: Commands, store: &mut Store) {
             store.registries.insert(
                 registry.clone(),
                 Registry {
-                    registry: url,
+                    registry: url.clone(),
                     home,
                 },
             );
 
             store.save().await;
-            // println!("Added registry: {}", registry);
+            Logger::success(&format!(
+                "Registry {} added with URL: {}",
+                registry.green().bold(),
+                url.yellow()
+            ));
         }
 
         // remove command
         Commands::Remove { registry } => {
-            store.registries.remove(&registry);
-            store.save().await;
-            // println!("Removed registry: {}", registry);
+            if let Some(removed) = store.registries.remove(&registry) {
+                store.save().await;
+                Logger::success(&format!(
+                    "Registry {} removed (URL: {})",
+                    registry.green().bold(),
+                    removed.registry.yellow()
+                ));
+            } else {
+                Logger::error(&format!(
+                    "Registry {} not found",
+                    registry.red().bold()
+                ));
+            }
         }
     }
 }
