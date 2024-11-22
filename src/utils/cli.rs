@@ -52,7 +52,7 @@ pub async fn execute_command(command: Commands, store: &mut Store) {
     match command {
         // list command
         Commands::Ls => {
-            store.list_registries();
+            store.list_registries().await;
         }
 
         // use command
@@ -91,19 +91,23 @@ pub async fn execute_command(command: Commands, store: &mut Store) {
                 }
 
                 // set current use registry
-                store.set_current_use(&registry, local);
+                // store.set_current_use(&registry, local);
                 store.save().await;
 
                 println!(
-                    "{}{}",
+                    "{} {}",
                     format!(" SUCCESS ").white().on_green(),
                     format!(
                         " {} registry updated!",
                         if local { "Local" } else { "Global" }
-                    )
+                    ).green()
                 );
             } else {
-                eprintln!("Registry not found!")
+                println!(
+                    "{} {}",
+                    format!(" ERROR ").white().on_red(),
+                    "Registry not found!".red()
+                );
             }
         }
 

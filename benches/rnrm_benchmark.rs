@@ -11,7 +11,6 @@ fn bench_ls(c: &mut Criterion) {
             // Create a mock store and call `Ls` command
             let mut store = Store {
                 registries: std::collections::HashMap::new(),
-                current_use_local: None,
             };
 
             // Add a sample registry to the store
@@ -19,14 +18,16 @@ fn bench_ls(c: &mut Criterion) {
                 "example_registry".to_string(),
                 Registry {
                     registry: "https://example.com".to_string(),
-                    home: Some("https://example-home.com".to_string()),
+                    home: Some("https://example.com".to_string()),
                 },
             );
 
-            // Simulate calling the Ls command
-            let rt = Runtime::new().unwrap();
-            rt.block_on(execute_command(Commands::Ls, &mut store));
-        });
+            // Create a runtime for async operations
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                execute_command(Commands::Ls, &mut store).await;
+            });
+        })
     });
 }
 
@@ -36,7 +37,6 @@ fn bench_use(c: &mut Criterion) {
             // Create a mock store and call `Use` command
             let mut store = Store {
                 registries: std::collections::HashMap::new(),
-                current_use_local: None,
             };
 
             // Add a sample registry to the store
@@ -68,7 +68,6 @@ fn bench_add(c: &mut Criterion) {
             // Create a mock store and call `Add` command
             let mut store = Store {
                 registries: std::collections::HashMap::new(),
-                current_use_local: None,
             };
 
             // Simulate calling the Add command
@@ -95,7 +94,6 @@ fn bench_remove(c: &mut Criterion) {
             // Create a mock store and call `Remove` command
             let mut store = Store {
                 registries: std::collections::HashMap::new(),
-                current_use_local: None,
             };
 
             // Add a sample registry to remove

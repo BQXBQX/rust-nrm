@@ -1,4 +1,5 @@
 use colored::Colorize;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::{collections::HashMap, path::Path};
@@ -16,20 +17,12 @@ pub struct Store {
     // This will allow TOML to map to a HashMap of `String` -> `Registry`
     #[serde(flatten)]
     pub registries: HashMap<String, Registry>,
-
-    // current work dir use registry
-    pub current_use_local: Option<String>,
-
-    // current global use registry
-    pub current_use_global: Option<String>,
 }
 
 impl Store {
     pub fn new() -> Store {
         Store {
             registries: HashMap::new(),
-            current_use_local: None,
-            current_use_global: None,
         }
     }
 
@@ -40,8 +33,8 @@ impl Store {
             let absolute_path: std::path::PathBuf = current_dir.join(file_path);
             println!(
                 "{} {}",
-                format!("Absolute path of registries list").blue().bold(),
-                format!("{}", absolute_path.display())
+                format!(" INFO ").white().on_blue(),
+                format!("Absolute path of registries list: {}", absolute_path.display()).blue()
             );
         }
 
@@ -52,8 +45,6 @@ impl Store {
         } else {
             Store {
                 registries: HashMap::new(),
-                current_use_local: None,
-                current_use_global: None,
             }
         }
     }
@@ -63,20 +54,53 @@ impl Store {
         write("registries.toml", content).await.unwrap();
     }
 
-    pub fn list_registries(&self) {
-        println!("Available registries:");
+    pub async fn get_current_registry(&self, is_local: bool) -> Option<String> {
+        let npmrc_path = if is_local {
+            ".npmrc".to_string()
+        } else {
+            let home_dir = env::var("HOME").expect("Failed to get HOME directory");
+            format!("{}/.npmrc", home_dir)
+        };
+
+        if Path::new(&npmrc_path).exists() {
+            if let Ok(content) = read_to_string(&npmrc_path).await {
+                let re = Regex::new(r"(?m)^\s*registry\s*=\s*(.+?)\s*$").unwrap();
+                if let Some(captures) = re.captures(&content) {
+                    let registry_url = captures.get(1).unwrap().as_str().to_string();
+                    // Find registry name by URL
+                    for (name, registry) in &self.registries {
+                        if registry.registry == registry_url {
+                            return Some(name.clone());
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    pub async fn list_registries(&self) {
+        println!(
+            "{} {}",
+            format!(" LIST ").white().on_magenta(),
+            "Available registries:".magenta().bold()
+        );
+
+        // Get current registries
+        let current_global = self.get_current_registry(false).await;
+        let current_local = self.get_current_registry(true).await;
 
         for (name, registry) in self.registries.iter() {
             let mut tags = Vec::new();
 
-            if let Some(current_global) = &self.current_use_global {
-                if name == current_global {
+            if let Some(current_global_name) = &current_global {
+                if name == current_global_name {
                     tags.push("[GLOBAL]".white().on_blue());
                 }
             }
 
-            if let Some(current_local) = &self.current_use_local {
-                if name == current_local {
+            if let Some(current_local_name) = &current_local {
+                if name == current_local_name {
                     tags.push("[LOCAL]".white().on_green());
                 }
             }
@@ -104,25 +128,18 @@ impl Store {
 
     pub fn set_current_use(&mut self, name: &str, is_local: bool) {
         if self.registries.contains_key(name) {
-            if is_local {
-                self.current_use_local = Some(name.to_string());
-                println!(
-                    "{} {} ({})",
-                    "Switched to registry:".cyan(),
-                    name.green().bold(),
-                    "local".yellow()
-                );
-            } else {
-                self.current_use_global = Some(name.to_string());
-                println!(
-                    "{} {} ({})",
-                    "Switched to registry:".cyan(),
-                    name.green().bold(),
-                    "global".yellow()
-                );
-            }
+            println!(
+                "{} {} ({})",
+                format!(" INFO ").white().on_blue(),
+                format!("Switched to registry: {}", name.green().bold()),
+                if is_local { "local".yellow() } else { "global".yellow() }
+            );
         } else {
-            println!("{} {}", "Registry not found:".red(), name.red().bold());
+            println!(
+                "{} {}",
+                format!(" ERROR ").white().on_red(),
+                format!("Registry not found: {}", name.red().bold())
+            );
         }
     }
 }
