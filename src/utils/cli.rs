@@ -1,18 +1,19 @@
 use colored::Colorize;
-use std::{env, path::Path};
-
-use clap::{Parser, Subcommand};
 use regex::Regex;
+use std::env;
+use std::path::Path;
 use tokio::fs::{read_to_string, write};
 
+use clap::{Parser, Subcommand};
 use crate::utils::registries::Registry;
 
-use super::registries::Store;
+use super::{Logger, registries::Store};
 
 #[derive(Parser, Debug)]
 #[command(name = "rnrm")]
 #[command(version = "1.0")]
-#[command(about = "manage npm registries base rust 🦀")]
+#[command(about = "A Rust-based NPM Registry Manager 🦀")]
+#[command(long_about = "RNRM helps you easily switch between different npm registries. It supports both global and local registry configuration.")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -20,30 +21,52 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    // List all registries
+    /// List all available registries
+    #[command(about = "List all available registries")]
+    #[command(long_about = "Display a list of all configured registries with their URLs. Currently active registries (global/local) will be highlighted.")]
     Ls,
 
-    // Change registry
+    /// Switch to a different registry
+    #[command(about = "Switch to a different registry")]
+    #[command(long_about = "Change the active npm registry. Use --local flag to change only the current directory's registry.")]
     Use {
-        #[arg(required = true)]
+        /// Name of the registry to use (e.g., npm, yarn, taobao)
+        #[arg(required = true, value_name = "REGISTRY")]
         registry: String,
+
+        /// Apply changes only to the current directory
         #[arg(short, long, default_value_t = false)]
         local: bool,
     },
 
-    // Test response time for all registries
+    /// Test registry response times
+    #[command(about = "Test registry response times")]
+    #[command(long_about = "Measure and compare response times for all configured registries to help you choose the fastest one.")]
     Test,
 
-    // Add a custom registry
+    /// Add a new registry
+    #[command(about = "Add a new registry")]
+    #[command(long_about = "Add a custom registry with its URL and optional homepage. The registry will be available for use immediately.")]
     Add {
+        /// Name for the new registry
+        #[arg(required = true, value_name = "NAME")]
         registry: String,
+
+        /// Registry URL (e.g., https://registry.npmjs.org/)
+        #[arg(required = true, value_name = "URL")]
         url: String,
-        #[arg(default_value = "")]
+
+        /// Homepage URL for the registry
+        #[arg(value_name = "HOMEPAGE")]
         home: Option<String>,
     },
 
-    // remove a custom registry
+    /// Remove a registry
+    #[command(about = "Remove a registry")]
+    #[command(long_about = "Remove a registry from the configuration. Built-in registries cannot be removed.")]
     Remove {
+        /// Name of the registry to remove
+        #[arg(required = true, value_name = "REGISTRY")]
         registry: String,
     },
 }
@@ -94,20 +117,12 @@ pub async fn execute_command(command: Commands, store: &mut Store) {
                 // store.set_current_use(&registry, local);
                 store.save().await;
 
-                println!(
-                    "{} {}",
-                    format!(" SUCCESS ").white().on_green(),
-                    format!(
-                        " {} registry updated!",
-                        if local { "Local" } else { "Global" }
-                    ).green()
-                );
+                Logger::success(&format!(
+                    "{} registry updated!",
+                    if local { "Local" } else { "Global" }
+                ));
             } else {
-                println!(
-                    "{} {}",
-                    format!(" ERROR ").white().on_red(),
-                    "Registry not found!".red()
-                );
+                Logger::error("Registry not found!");
             }
         }
 

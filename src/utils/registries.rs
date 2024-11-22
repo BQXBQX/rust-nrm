@@ -6,6 +6,8 @@ use std::{collections::HashMap, path::Path};
 use tokio::fs::{read_to_string, write};
 use toml;
 
+use super::Logger;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Registry {
     pub registry: String,
@@ -31,11 +33,10 @@ impl Store {
 
         if let Ok(current_dir) = env::current_dir() {
             let absolute_path: std::path::PathBuf = current_dir.join(file_path);
-            println!(
-                "{} {}",
-                format!(" INFO ").white().on_blue(),
-                format!("Absolute path of registries list: {}", absolute_path.display()).blue()
-            );
+            Logger::info(&format!(
+                "Absolute path of registries list: {}",
+                absolute_path.display()
+            ));
         }
 
         if Path::new(file_path).exists() {
@@ -80,11 +81,7 @@ impl Store {
     }
 
     pub async fn list_registries(&self) {
-        println!(
-            "{} {}",
-            format!(" LIST ").white().on_magenta(),
-            "Available registries:".magenta().bold()
-        );
+        Logger::list("Available registries:");
 
         // Get current registries
         let current_global = self.get_current_registry(false).await;
@@ -128,18 +125,13 @@ impl Store {
 
     pub fn set_current_use(&mut self, name: &str, is_local: bool) {
         if self.registries.contains_key(name) {
-            println!(
-                "{} {} ({})",
-                format!(" INFO ").white().on_blue(),
-                format!("Switched to registry: {}", name.green().bold()),
+            Logger::info(&format!(
+                "Switched to registry: {} ({})",
+                name.green().bold(),
                 if is_local { "local".yellow() } else { "global".yellow() }
-            );
+            ));
         } else {
-            println!(
-                "{} {}",
-                format!(" ERROR ").white().on_red(),
-                format!("Registry not found: {}", name.red().bold())
-            );
+            Logger::error(&format!("Registry not found: {}", name));
         }
     }
 }
