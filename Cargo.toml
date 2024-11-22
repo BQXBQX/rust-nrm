@@ -1,6 +1,6 @@
 [package]
 name = "rust-nrm"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "A Rust-based NPM Registry Manager for efficiently managing and switching between npm registries"
 license = "MIT"
@@ -8,6 +8,10 @@ authors = ["BQXBQX"]
 repository = "https://github.com/BQXBQX/rnrm"
 keywords = ["npm", "registry", "manager", "cli"]
 categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "rust-nrm"
+path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.5.21", features = ["derive"] }
