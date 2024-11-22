@@ -106,6 +106,25 @@ async fn test_remove_command() {
 #[tokio::test]
 async fn test_test_command() {
     let mut executor = setup().await;
+    
+    // Add a test registry that we know will timeout
+    executor
+        .execute(Commands::Add {
+            registry: "test-timeout".to_string(),
+            url: "https://registry.does.not.exist.example.com".to_string(),
+            home: None,
+        })
+        .await;
+    
+    // Run the test command
     executor.execute(Commands::Test).await;
+    
+    // Clean up
+    executor
+        .execute(Commands::Remove {
+            registry: "test-timeout".to_string(),
+        })
+        .await;
+    
     cleanup().await;
 }

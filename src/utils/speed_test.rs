@@ -18,7 +18,10 @@ pub struct SpeedTester {
 impl SpeedTester {
     pub fn new() -> Self {
         SpeedTester {
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(5))  // 5 seconds timeout
+                .build()
+                .unwrap_or_else(|_| reqwest::Client::new()),
         }
     }
 
