@@ -1,65 +1,115 @@
-use colored::Colorize;
+use colored::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::env;
-use std::{collections::HashMap, path::Path};
-use tokio::fs::{read_to_string, write};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use tokio::fs;
 use toml;
 
 use super::speed_test::{SpeedTestResult, SpeedTester};
 use super::Logger;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Registry {
     pub registry: String,
     pub home: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Debug)]
 pub struct Store {
-    // This will allow TOML to map to a HashMap of `String` -> `Registry`
-    #[serde(flatten)]
     pub registries: HashMap<String, Registry>,
 }
 
 impl Store {
-    pub async fn load() -> Store {
-        let file_path = "registries.toml";
+    pub async fn load() -> Self {
+        let config_path = get_config_path();
+        Logger::info(&format!("Config file path: {}", config_path.display()));
 
-        if let Ok(current_dir) = env::current_dir() {
-            let absolute_path: std::path::PathBuf = current_dir.join(file_path);
-            Logger::info(&format!(
-                "Absolute path of registries list: {}",
-                absolute_path.display()
-            ));
+        if !config_path.exists() {
+            Logger::info("Config file not found, creating default configuration...");
+            Self::create_default_config(&config_path).await;
         }
 
-        if Path::new(file_path).exists() {
-            let content = read_to_string(file_path).await.unwrap_or_default();
-            let value: Store = toml::from_str(&content).unwrap_or_default();
-            value
-        } else {
-            Store {
-                registries: HashMap::new(),
+        match fs::read_to_string(&config_path).await {
+            Ok(contents) => {
+                let registries: HashMap<String, Registry> = toml::from_str(&contents).unwrap_or_default();
+                Self { registries }
+            }
+            Err(e) => {
+                Logger::error(&format!("Failed to read config file: {}", e));
+                Self {
+                    registries: HashMap::new(),
+                }
             }
         }
     }
 
+    async fn create_default_config(config_path: &Path) {
+        let default_registries = HashMap::from([
+            (
+                "npm".to_string(),
+                Registry {
+                    registry: "https://registry.npmjs.org/".to_string(),
+                    home: Some("https://www.npmjs.org".to_string()),
+                },
+            ),
+            (
+                "yarn".to_string(),
+                Registry {
+                    registry: "https://registry.yarnpkg.com/".to_string(),
+                    home: Some("https://yarnpkg.com".to_string()),
+                },
+            ),
+            (
+                "taobao".to_string(),
+                Registry {
+                    registry: "https://registry.npmmirror.com/".to_string(),
+                    home: Some("https://npmmirror.com/".to_string()),
+                },
+            ),
+            (
+                "tencent".to_string(),
+                Registry {
+                    registry: "https://mirrors.cloud.tencent.com/npm/".to_string(),
+                    home: Some("https://mirrors.cloud.tencent.com/npm/".to_string()),
+                },
+            ),
+        ]);
+
+        if let Some(parent) = config_path.parent() {
+            if !parent.exists() {
+                if let Err(e) = fs::create_dir_all(parent).await {
+                    Logger::error(&format!("Failed to create config directory: {}", e));
+                    return;
+                }
+            }
+        }
+
+        let toml = toml::to_string(&default_registries).unwrap();
+        if let Err(e) = fs::write(config_path, toml).await {
+            Logger::error(&format!("Failed to write default config: {}", e));
+        }
+    }
+
     pub async fn save(&self) {
-        let content = toml::to_string_pretty(self).unwrap();
-        write("registries.toml", content).await.unwrap();
+        let config_path = get_config_path();
+        let content = toml::to_string_pretty(&self.registries).unwrap();
+        if let Err(e) = fs::write(&config_path, content).await {
+            Logger::error(&format!("Failed to save config: {}", e));
+        }
     }
 
     pub async fn get_current_registry(&self, is_local: bool) -> Option<String> {
         let npmrc_path = if is_local {
             ".npmrc".to_string()
         } else {
-            let home_dir = env::var("HOME").expect("Failed to get HOME directory");
-            format!("{}/.npmrc", home_dir)
+            dirs::home_dir()
+                .map(|path| path.join(".npmrc").to_string_lossy().to_string())
+                .expect("Failed to get home directory")
         };
 
         if Path::new(&npmrc_path).exists() {
-            if let Ok(content) = read_to_string(&npmrc_path).await {
+            if let Ok(content) = fs::read_to_string(&npmrc_path).await {
                 let re = Regex::new(r"(?m)^\s*registry\s*=\s*(.+?)\s*$").unwrap();
                 if let Some(captures) = re.captures(&content) {
                     let registry_url = captures.get(1).unwrap().as_str().to_string();
@@ -144,4 +194,9 @@ impl Store {
 
         tester.test_all(&registries).await
     }
+}
+
+fn get_config_path() -> PathBuf {
+    let home = dirs::home_dir().expect("Could not find home directory");
+    home.join(".config").join("rust-nrm").join("registries.toml")
 }
