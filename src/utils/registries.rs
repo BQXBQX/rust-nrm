@@ -15,7 +15,7 @@ pub struct Registry {
     pub home: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Store {
     pub registries: HashMap<String, Registry>,
 }
@@ -32,7 +32,8 @@ impl Store {
 
         match fs::read_to_string(&config_path).await {
             Ok(contents) => {
-                let registries: HashMap<String, Registry> = toml::from_str(&contents).unwrap_or_default();
+                let registries: HashMap<String, Registry> =
+                    toml::from_str(&contents).unwrap_or_default();
                 Self { registries }
             }
             Err(e) => {
@@ -198,5 +199,7 @@ impl Store {
 
 fn get_config_path() -> PathBuf {
     let home = dirs::home_dir().expect("Could not find home directory");
-    home.join(".config").join("rust-nrm").join("registries.toml")
+    home.join(".config")
+        .join("rust-nrm")
+        .join("registries.toml")
 }
