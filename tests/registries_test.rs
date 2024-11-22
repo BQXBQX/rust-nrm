@@ -77,6 +77,7 @@ async fn test_remove_registry() {
 
 #[tokio::test]
 async fn test_save_and_load() {
+    cleanup().await;  // Start with a clean state
     let mut store = setup().await;
     
     // Add a test registry
@@ -88,12 +89,20 @@ async fn test_save_and_load() {
     // Save the store
     store.save().await;
     
+    // Ensure the file exists before trying to load it
+    let config_path = dirs::home_dir()
+        .expect("Could not find home directory")
+        .join(".config")
+        .join("rust-nrm")
+        .join("registries.toml");
+    assert!(config_path.exists(), "Config file should exist after save");
+    
     // Load a new store and verify the data
     let loaded_store = Store::load().await;
-    assert!(loaded_store.registries.contains_key("test"));
+    assert!(loaded_store.registries.contains_key("test"), "Test registry should exist in loaded store");
     let test_registry = loaded_store.registries.get("test").unwrap();
-    assert_eq!(test_registry.registry, "https://test.com");
-    assert_eq!(test_registry.home, Some("https://test.com".to_string()));
+    assert_eq!(test_registry.registry, "https://test.com", "Registry URL should match");
+    assert_eq!(test_registry.home, Some("https://test.com".to_string()), "Home URL should match");
     
     cleanup().await;
 }

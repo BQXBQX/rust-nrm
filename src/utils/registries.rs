@@ -32,15 +32,17 @@ impl Store {
 
         match fs::read_to_string(&config_path).await {
             Ok(contents) => {
-                let registries: HashMap<String, Registry> =
-                    toml::from_str(&contents).unwrap_or_default();
-                Self { registries }
+                match toml::from_str(&contents) {
+                    Ok(registries) => Self { registries },
+                    Err(e) => {
+                        Logger::error(&format!("Failed to parse config file: {}", e));
+                        Self::create_default_store()
+                    }
+                }
             }
             Err(e) => {
                 Logger::error(&format!("Failed to read config file: {}", e));
-                Self {
-                    registries: HashMap::new(),
-                }
+                Self::create_default_store()
             }
         }
     }
@@ -89,6 +91,41 @@ impl Store {
         let toml = toml::to_string(&default_registries).unwrap();
         if let Err(e) = fs::write(config_path, toml).await {
             Logger::error(&format!("Failed to write default config: {}", e));
+        }
+    }
+
+    fn create_default_store() -> Self {
+        Self {
+            registries: HashMap::from([
+                (
+                    "npm".to_string(),
+                    Registry {
+                        registry: "https://registry.npmjs.org/".to_string(),
+                        home: Some("https://www.npmjs.org".to_string()),
+                    },
+                ),
+                (
+                    "yarn".to_string(),
+                    Registry {
+                        registry: "https://registry.yarnpkg.com/".to_string(),
+                        home: Some("https://yarnpkg.com".to_string()),
+                    },
+                ),
+                (
+                    "taobao".to_string(),
+                    Registry {
+                        registry: "https://registry.npmmirror.com/".to_string(),
+                        home: Some("https://npmmirror.com/".to_string()),
+                    },
+                ),
+                (
+                    "tencent".to_string(),
+                    Registry {
+                        registry: "https://mirrors.cloud.tencent.com/npm/".to_string(),
+                        home: Some("https://mirrors.cloud.tencent.com/npm/".to_string()),
+                    },
+                ),
+            ])
         }
     }
 
