@@ -27,8 +27,8 @@ pub enum Commands {
     Use {
         #[arg(required = true)]
         registry: String,
-        // #[arg(short, long)]
-        // local: bool,
+        #[arg(short, long, default_value_t = false)]
+        local: bool,
     },
 
     // Test response time for all registries
@@ -56,13 +56,23 @@ pub async fn execute_command(command: Commands, store: &mut Store) {
         }
 
         // use command
-        Commands::Use { registry } => {
+        Commands::Use { registry, local } => {
             if let Some(registry_data) = store.registries.get(&registry) {
                 let registry_text = format!("registry={}", registry_data.registry);
-                let npmrc_path: &str = ".npmrc";
+
+                let npmrc_path = if local {
+                    ".npmrc".to_string()
+                } else {
+                    let home_dir = env::var("HOME").expect("Failed to get HOME directory");
+                    format!("{}/.npmrc", home_dir)
+                };
 
                 if let Ok(current_dir) = env::current_dir() {
-                    let absolute_path: std::path::PathBuf = current_dir.join(npmrc_path);
+                    let absolute_path = if local {
+                        current_dir.join(&npmrc_path)
+                    } else {
+                        Path::new(&npmrc_path).to_path_buf()
+                    };
                     println!(
                         "{} {}",
                         format!("Absolute path of .npmrc:").blue().bold(),
@@ -70,25 +80,27 @@ pub async fn execute_command(command: Commands, store: &mut Store) {
                     );
                 }
 
-                if Path::new(npmrc_path).exists() {
-                    let content = read_to_string(npmrc_path).await.unwrap();
+                if Path::new(&npmrc_path).exists() {
+                    let content = read_to_string(&npmrc_path).await.unwrap();
                     let re = Regex::new(r"(?m)^\s*registry\s*=\s*.*$").unwrap();
                     let updated_content = re.replace_all(&content, &registry_text).to_string();
 
-                    write(npmrc_path, updated_content).await.unwrap();
+                    write(&npmrc_path, updated_content).await.unwrap();
                 } else {
-                    write(npmrc_path, registry_text).await.unwrap();
+                    write(&npmrc_path, registry_text).await.unwrap();
                 }
 
                 // set current use registry
-                store.set_current_use(&registry);
-
+                store.set_current_use(&registry, local);
                 store.save().await;
 
                 println!(
                     "{}{}",
                     format!(" SUCCESS ").white().on_green(),
-                    format!(" Current Dir registry updated!")
+                    format!(
+                        " {} registry updated!",
+                        if local { "Local" } else { "Global" }
+                    )
                 );
             } else {
                 eprintln!("Registry not found!")

@@ -16,10 +16,23 @@ pub struct Store {
     // This will allow TOML to map to a HashMap of `String` -> `Registry`
     #[serde(flatten)]
     pub registries: HashMap<String, Registry>,
-    pub current_use: Option<String>,
+
+    // current work dir use registry
+    pub current_use_local: Option<String>,
+
+    // current global use registry
+    pub current_use_global: Option<String>,
 }
 
 impl Store {
+    pub fn new() -> Store {
+        Store {
+            registries: HashMap::new(),
+            current_use_local: None,
+            current_use_global: None,
+        }
+    }
+
     pub async fn load() -> Store {
         let file_path = "registries.toml";
 
@@ -39,7 +52,8 @@ impl Store {
         } else {
             Store {
                 registries: HashMap::new(),
-                current_use: Some("hello".to_string()),
+                current_use_local: None,
+                current_use_global: None,
             }
         }
     }
@@ -50,31 +64,63 @@ impl Store {
     }
 
     pub fn list_registries(&self) {
-        println!("{}", "Registry List:".bold().cyan());
-        println!("{:?}", &self);
+        println!("Available registries:");
 
         for (name, registry) in self.registries.iter() {
-            if let Some(current) = &self.current_use {
-                if name == current {
-                    println!(
-                        "{} -> {} [{}]",
-                        name.green().bold(),
-                        registry.registry.yellow(),
-                        "CURRENT".white().on_green()
-                    );
-                } else {
-                    println!("{} -> {}", name.green(), registry.registry.yellow());
+            let mut tags = Vec::new();
+
+            if let Some(current_global) = &self.current_use_global {
+                if name == current_global {
+                    tags.push("[GLOBAL]".white().on_blue());
                 }
-            } else {
-                println!("{} -> {}", name.green(), registry.registry.yellow());
             }
+
+            if let Some(current_local) = &self.current_use_local {
+                if name == current_local {
+                    tags.push("[LOCAL]".white().on_green());
+                }
+            }
+
+            let tags_str = if !tags.is_empty() {
+                format!(
+                    " {}",
+                    tags.iter()
+                        .map(|t| t.to_string())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                )
+            } else {
+                String::new()
+            };
+
+            println!(
+                "{} -> {}{}",
+                name.green().bold(),
+                registry.registry.yellow(),
+                tags_str
+            );
         }
     }
 
-    pub fn set_current_use(&mut self, name: &str) {
+    pub fn set_current_use(&mut self, name: &str, is_local: bool) {
         if self.registries.contains_key(name) {
-            self.current_use = Some(name.to_string());
-            println!("{} {}", "Switched to registry:".cyan(), name.green().bold());
+            if is_local {
+                self.current_use_local = Some(name.to_string());
+                println!(
+                    "{} {} ({})",
+                    "Switched to registry:".cyan(),
+                    name.green().bold(),
+                    "local".yellow()
+                );
+            } else {
+                self.current_use_global = Some(name.to_string());
+                println!(
+                    "{} {} ({})",
+                    "Switched to registry:".cyan(),
+                    name.green().bold(),
+                    "global".yellow()
+                );
+            }
         } else {
             println!("{} {}", "Registry not found:".red(), name.red().bold());
         }

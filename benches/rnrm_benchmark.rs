@@ -11,6 +11,7 @@ fn bench_ls(c: &mut Criterion) {
             // Create a mock store and call `Ls` command
             let mut store = Store {
                 registries: std::collections::HashMap::new(),
+                current_use_local: None,
             };
 
             // Add a sample registry to the store
@@ -35,6 +36,7 @@ fn bench_use(c: &mut Criterion) {
             // Create a mock store and call `Use` command
             let mut store = Store {
                 registries: std::collections::HashMap::new(),
+                current_use_local: None,
             };
 
             // Add a sample registry to the store
@@ -52,6 +54,7 @@ fn bench_use(c: &mut Criterion) {
             rt.block_on(execute_command(
                 Commands::Use {
                     registry: registry_name,
+                    local: false,
                 },
                 &mut store,
             ));
@@ -65,6 +68,7 @@ fn bench_add(c: &mut Criterion) {
             // Create a mock store and call `Add` command
             let mut store = Store {
                 registries: std::collections::HashMap::new(),
+                current_use_local: None,
             };
 
             // Simulate calling the Add command
@@ -91,6 +95,7 @@ fn bench_remove(c: &mut Criterion) {
             // Create a mock store and call `Remove` command
             let mut store = Store {
                 registries: std::collections::HashMap::new(),
+                current_use_local: None,
             };
 
             // Add a sample registry to remove
