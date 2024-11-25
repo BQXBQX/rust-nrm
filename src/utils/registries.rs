@@ -77,6 +77,20 @@ impl Store {
                     home: Some("https://mirrors.cloud.tencent.com/npm/".to_string()),
                 },
             ),
+            (
+                "npmMirror".to_string(),
+                Registry {
+                    registry: "https://skimdb.npmjs.com/registry/".to_string(),
+                    home: Some("https://skimdb.npmjs.com".to_string()),
+                },
+            ),
+            (
+                "github".to_string(),
+                Registry {
+                    registry: "https://npm.pkg.github.com/".to_string(),
+                    home: Some("https://github.com".to_string()),
+                },
+            ),
         ]);
 
         if let Some(parent) = config_path.parent() {
@@ -123,6 +137,20 @@ impl Store {
                     Registry {
                         registry: "https://mirrors.cloud.tencent.com/npm/".to_string(),
                         home: Some("https://mirrors.cloud.tencent.com/npm/".to_string()),
+                    },
+                ),
+                (
+                    "npmMirror".to_string(),
+                    Registry {
+                        registry: "https://skimdb.npmjs.com/registry/".to_string(),
+                        home: Some("https://skimdb.npmjs.com".to_string()),
+                    },
+                ),
+                (
+                    "github".to_string(),
+                    Registry {
+                        registry: "https://npm.pkg.github.com/".to_string(),
+                        home: Some("https://github.com".to_string()),
                     },
                 ),
             ])
