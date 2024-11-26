@@ -11,7 +11,7 @@ use super::{registries::Store, Logger};
 
 #[derive(Parser, Debug)]
 #[command(name = "rust-nrm")]
-#[command(version = "0.1.4")]
+#[command(version = "0.1.5")]
 #[command(about = "A Rust-based NPM Registry Manager 🦀")]
 #[command(
     long_about = "RNRM helps you easily switch between different npm registries. It supports both global and local registry configuration."
@@ -72,7 +72,7 @@ pub enum Commands {
     },
 
     /// Remove a registry
-    #[command(about = "Remove a registry")]
+    #[command(about = "Remove a registry", alias = "rm")]
     #[command(
         long_about = "Remove a registry from the configuration. Built-in registries cannot be removed."
     )]
