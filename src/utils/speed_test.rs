@@ -1,6 +1,7 @@
 use super::Logger;
 use colored::Colorize;
 use reqwest;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex;
@@ -14,6 +15,7 @@ pub struct SpeedTestResult {
     pub is_success: bool,
 }
 
+#[derive(Clone)]
 pub struct SpeedTester {
     client: reqwest::Client,
 }
@@ -49,62 +51,23 @@ impl SpeedTester {
         Logger::info("Testing registry speeds...");
         println!(); // Add a blank line for better readability
 
-        let registry_count = registries.len();
-        // Store initial positions for each registry
-        let positions: Arc<Mutex<Vec<(String, usize)>>> = Arc::new(Mutex::new(
-            registries
-                .iter()
-                .enumerate()
-                .map(|(i, (name, _))| (name.clone(), i))
-                .collect(),
-        ));
-
-        // Print the initial list of registries being tested
-        for (_index, (name, _)) in registries.iter().enumerate() {
-            println!(
-                "{} {} {}",
-                "⋯".dimmed(), // Loading indicator
-                name.bold(),
-                "->".dimmed(),
-            );
-        }
-
         // Create a shared vector for results
         let results = Arc::new(Mutex::new(Vec::new()));
 
+        // Create an atomic counter for ranking
+        let speed_rank = Arc::new(AtomicUsize::new(1));
+
         // Create a vector of tasks for parallel execution
-        let mut handles = Vec::new();
+        let mut handles: Vec<task::JoinHandle<()>> = Vec::new();
         for (name, url) in registries.iter() {
             let name = name.clone();
             let url = url.clone();
-            let client = self.client.clone();
+            let client = self.clone();
             let results = Arc::clone(&results);
-            let positions = Arc::clone(&positions);
+            let speed_rank = Arc::clone(&speed_rank);
 
             let handle = task::spawn(async move {
-                let start = Instant::now();
-                let result = client.get(&url).send().await;
-                let elapsed = start.elapsed().as_secs_f64();
-
-                let test_result = SpeedTestResult {
-                    name: name.clone(),
-                    url,
-                    response_time: elapsed,
-                    is_success: result.is_ok(),
-                };
-
-                // Get the original position of this registry
-                let pos = {
-                    let positions = positions.lock().await;
-                    positions
-                        .iter()
-                        .find(|(n, _)| n == &name)
-                        .map(|(_, i)| *i)
-                        .unwrap_or(0)
-                };
-
-                // Move cursor to the correct position and update the result
-                print!("\x1B[{}A", registry_count - pos);
+                let test_result = client.test_registry(&name, &url).await;
 
                 let status = if test_result.is_success {
                     "✓".green()
@@ -114,17 +77,17 @@ impl SpeedTester {
 
                 let time_str = Self::format_time(test_result.response_time);
                 let time_display = time_str.normal();
+                let current_rank = speed_rank.fetch_add(1, Ordering::Relaxed);
+                let rank = format!("#{}", current_rank).bold();
 
                 println!(
-                    "\x1B[2K{} {} {} {}", // \x1B[2K clears the entire line
+                    "{} {} {} {} {}",
+                    rank,
                     status,
                     test_result.name.bold(),
                     "->".dimmed(),
                     time_display
                 );
-
-                // Move cursor back down
-                print!("\x1B[{}B", registry_count - pos);
 
                 // Store the result
                 let mut results = results.lock().await;
